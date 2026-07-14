@@ -19,8 +19,8 @@ import uvicorn
 # ═══════════════════════════════════════════
 # Path Configuration (统一路径管理)
 # ═══════════════════════════════════════════
-APP_DIR = pathlib.Path(r"D:\22222\英语网站\english-tutor-app")
-SKILL_PATH = r"D:\22222\英语网站\英语教练（英语辅导）\SKILL.md"
+APP_DIR = pathlib.Path(__file__).parent
+SKILL_PATH = str(APP_DIR / "skill.md")
 CONFIG_PATH = APP_DIR / "config.json"
 RECORDS_PATH = APP_DIR / "data" / "records.json"
 HTML_PATH = APP_DIR / "static" / "index.html"
@@ -75,7 +75,7 @@ if os.path.exists(CONFIG_PATH):
     except:
         CONFIG = {}
 
-API_KEY = CONFIG.get("api_key", "")
+API_KEY = os.environ.get("API_KEY") or CONFIG.get("api_key", "")
 API_ENDPOINT = CONFIG.get("endpoint", "https://api.deepseek.com/v1/chat/completions")
 AI_MODEL = CONFIG.get("model", "deepseek-chat")
 
