@@ -1,0 +1,213 @@
+﻿# -*- coding: utf-8 -*-
+import os, json, re, threading, random
+from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
+from typing import Optional
+import uvicorn
+
+SKILL_PATH = r"D:/11111/agents/英语教练（英语辅导）/SKILL.md"
+# -*- coding: utf-8 -*-
+import os, json, re, threading, random, datetime
+from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
+from typing import Optional
+import uvicorn
+
+SKILL_PATH = r"D:\11111\agents\英语教练（英语辅导）\SKILL.md"
+SKILL_CONTENT = ""
+if os.path.exists(SKILL_PATH):
+    with open(SKILL_PATH, "r", encoding="utf-8") as f:
+        SKILL_CONTENT = f.read()
+
+RECORDS_PATH = r"D:\11111\agents\英语教练（英语辅导）\学习记录\records.json"
+RECORDS = {}
+if os.path.exists(RECORDS_PATH):
+    try:
+        with open(RECORDS_PATH, "r", encoding="utf-8") as f:
+            RECORDS = json.load(f)
+    except:
+        RECORDS = {}
+
+app = FastAPI(title="Echo English Tutor")
+
+class Msg(BaseModel):
+    text: str
+    name: str = "同学"
+
+@app.get("/api/status")
+async def get_status():
+    return {"status": "ok", "skill_loaded": len(SKILL_CONTENT) > 0}
+@app.post("/api/chat")
+async def chat(msg: Msg):
+    text = msg.text.strip()
+    if not text:
+        return {"reply": "想说点什么？我在听。"}
+    reply = generate_reply(text, msg.name)
+    return {"reply": reply}
+
+def generate_reply(text, name):
+    t = text.lower()
+    if re.search(r"(你好|hi|hello|嗨|早|晚上好|哈喽|hey)", t):
+        return f"你好啊，{name}！我是你的英语大师 Echo。想从哪个阶段开始学？我可以先给你做个水平测试。"
+    if re.search(r"(你是谁|你叫什么|echo|大师)", t):
+        return "我是 Echo，你的专属英语大师。我脑子里装着专升本英语的完整五阶段体系，从零基础到考纲全词汇，一步步带你上去。想学什么随时说。"
+    if re.search(r"(测试|考试|考考|测验|阶段|水平|摸底|第.*题|a\)|b\)|c\)|a\.|b\.|c\.)", t):
+        return handle_stage_test(text, name)
+    if re.search(r"(词汇|单词|背词|记单词)", t):
+        return "好的，今天学5个高频动词：\n\n1. **come** - 来\n2. **go** - 去\n3. **eat** - 吃\n4. **drink** - 喝\n5. **like** - 喜欢\n\n记住了吗？要不要我把它们放进句子里考考你？"
+    if re.search(r"(语法|时态|从句|句型|被动|语态)", t):
+        return "语法你想从哪块开始？\n- **一般现在时**（I go / She goes）\n- **现在进行时**（I am going）\n- **一般过去时**（I went）\n- **一般将来时**（I will go）\n- **三大从句**（定语/名词性/状语）\n- **被动语态**\n- **非谓语动词**\n\n告诉我，我详细讲。"
+    if re.search(r"(阅读|短文|文章|读|passage)", t):
+        return "来读一篇小短文：\n\n**My Day**\nEvery morning, I get up at 7 o'clock. I eat breakfast and then go to school. I have lunch at school. In the afternoon, I play football with my friends. I go home at 5 o'clock.\n\n**问题**：What time does he get up?\nA. 6 o'clock  B. 7 o'clock  C. 8 o'clock\n\n选哪个？"
+    if re.search(r"(写作|作文|模板|写信|书信|议论文)", t):
+        return "写作的话，先给你一个万能开头模板：\n\n**书信开头**：\nDear [Name],\nI am writing to you to...\n\n**议论文开头**：\nAs we all know, [topic] has become a hot topic in our daily life.\n\n**过渡句**：\nFirst of all... / In addition... / Last but not least...\n\n**结尾句**：\nI am looking forward to your reply.\n\n要试试写一篇吗？告诉我题目。"
+    if re.search(r"(计划|安排|每天|多久|时间)", t):
+        return f"{name}，学习计划最重要的是可持续。\n\n我的建议：\n1. **每天30分钟**，贵在坚持\n2. 分三块：**10分钟复习旧词 + 10分钟新词 + 10分钟语法**\n3. **每周一个小测验**，看进步\n\n你每天能投入多少时间？多了减、少了加，你来定。"
+    if re.search(r"(谢谢|thank|thanks|好的|明白了|懂了|嗯|ok)", t):
+        return f"不客气，{name}！每天进步一点点就好。有问题随时找我。"
+    # Check for answers to test questions
+    if re.search(r"^(a|b|c|a\)|b\)|c\)|a\.|b\.|c\.)$", t.strip()):
+        return handle_test_answer(t.strip(), name)
+    return f"{name}，我明白你的意思了。想学哪个方向？\n\n我可以帮你：\n1. **词汇** - 背单词，记搭配\n2. **语法** - 时态、从句、语态\n3. **阅读** - 短文理解\n4. **写作** - 模板、书信、议论文\n5. **水平测试** - 看看你什么阶段\n\n想先来哪个？"
+
+# Stage test state
+test_state = {"active": False, "stage": 1, "q_index": 0, "correct": 0, "total": 0}
+
+stage1_questions = [
+    {"q": "She ___ a student.", "a": "b", "options": ["A. am", "B. is", "C. are"]},
+    {"q": "They ___ my friends.", "a": "c", "options": ["A. is", "B. am", "C. are"]},
+    {"q": "I ___ a red apple.", "a": "a", "options": ["A. have", "B. has", "C. having"]},
+    {"q": "翻译这句话：这是一本书。", "a": "this is a book", "options": [], "is_translation": True},
+    {"q": "改错：He go to school every day.", "a": "he goes", "options": [], "is_editing": True},
+]
+
+stage2_questions = [
+    {"q": "I ___ (go) to school every day.", "a": "a", "options": ["A. go", "B. goes", "C. went"]},
+    {"q": "She ___ (watch) TV now.", "a": "c", "options": ["A. watches", "B. watched", "C. is watching"]},
+    {"q": "He ___ (buy) a book yesterday.", "a": "b", "options": ["A. buy", "B. bought", "C. buys"]},
+    {"q": "翻译：他昨天没来上学。", "a": "he didn't come", "options": [], "is_translation": True},
+]
+
+def handle_stage_test(text, name):
+    global test_state
+    # Check if they want a specific stage
+    stage_match = re.search(r"阶段([一二三四五12345])", text)
+    if stage_match:
+        stage_map = {"一": 1, "二": 2, "三": 3, "四": 4, "五": 5}
+        raw = stage_match.group(1)
+        stage_num = stage_map.get(raw, int(raw) if raw.isdigit() else 1)
+    else:
+        stage_num = 1
+    
+    test_state["active"] = True
+    test_state["stage"] = stage_num
+    test_state["q_index"] = 0
+    test_state["correct"] = 0
+    test_state["total"] = 0
+    
+    if stage_num == 1:
+        q = stage1_questions[0]
+        return f"好的{name}，来测测阶段一的基础！\n\n**第1题**\n{q['q']}\n" + "\n".join(q["options"]) + "\n\n选哪个？"
+    elif stage_num == 2:
+        q = stage2_questions[0]
+        return f"好的{name}，来测测阶段二！\n\n**第1题**\n{q['q']}\n" + "\n".join(q["options"]) + "\n\n选哪个？"
+    else:
+        return f"{name}，我先从阶段一的测试开始吧。\n\nShe ___ a student.\nA. am  B. is  C. are\n\n选哪个？"
+def handle_test_answer(answer, name):
+    global test_state
+    if not test_state["active"]:
+        return "要先开始测试才能批改哦。说「测试」我来出题。"
+    
+    stage = test_state["stage"]
+    q_idx = test_state["q_index"]
+    
+    questions = stage1_questions if stage == 1 else stage2_questions
+    
+    if q_idx >= len(questions):
+        test_state["active"] = False
+        score = test_state["correct"]
+        total = test_state["total"]
+        if score >= total * 0.6:
+            next_stage = stage + 1
+            return f"测试结束！你答对了{score}题（共{total}题），正确率{int(score/total*100)}%！\n\n{'恭喜通过！' if score >= total*0.6 else '还需要再巩固一下'}\n\n要进入下一阶段吗？说「开始」继续。"
+        else:
+            return f"测试结束！你答对了{score}题（共{total}题）。\n\n还需要再复习一下阶段{stage}的内容。要我重点讲一下错题的知识点吗？"
+    
+    q = questions[q_idx]
+    correct = q["a"]
+    user_ans = answer.strip().lower().replace(")", "").replace(".", "").replace(" ", "")
+    expected = correct.lower().replace(")", "").replace(".", "").replace(" ", "")
+    
+    test_state["total"] += 1
+    
+    is_correct = False
+    if q.get("is_translation") or q.get("is_editing"):
+        if expected in user_ans or user_ans in expected:
+            is_correct = True
+    else:
+        if user_ans == expected:
+            is_correct = True
+    
+    if is_correct:
+        test_state["correct"] += 1
+        feedback = "答对了！"
+    else:
+        feedback = f"不对哦。正确答案是：{correct}"
+        if q.get("options"):
+            feedback += f"\n说明：{q['q']} 的正确选项是 {correct}"
+    
+    test_state["q_index"] += 1
+    next_idx = test_state["q_index"]
+    
+    if next_idx >= len(questions):
+        test_state["active"] = False
+        score = test_state["correct"]
+        total = test_state["total"]
+        pct = int(score/total*100)
+        passed = score >= total * 0.6
+        result = "恭喜通过" if passed else "还需要巩固"
+        more = f"\n\n要进入阶段{stage+1}吗？说「开始阶段{stage+1}」继续。" if passed else "\n\n要我帮你复习一下吗？"
+        return f"{feedback}\n\n测试结束！\n正确：{score}/{total}（{pct}%）\n{result}！{more}"
+    
+    next_q = questions[next_idx]
+    msg = f"{feedback}\n\n**第{next_idx+1}题**\n{next_q['q']}"
+    if next_q.get("options"):
+        msg += "\n" + "\n".join(next_q["options"])
+    msg += "\n\n选哪个？"
+    return msg
+
+@app.get("/api/records")
+async def get_records():
+    return JSONResponse(content=RECORDS)
+
+@app.post("/api/save_record")
+async def save_record(data: dict):
+    global RECORDS
+    rec_lock = threading.Lock()
+    with rec_lock:
+        RECORDS.update(data)
+        os.makedirs(os.path.dirname(RECORDS_PATH), exist_ok=True)
+        with open(RECORDS_PATH, "w", encoding="utf-8") as f:
+            json.dump(RECORDS, f, ensure_ascii=False, indent=2)
+    return {"status": "saved"}
+
+@app.get("/")
+async def serve_frontend():
+    html_path = r"D:\11111\english-tutor-app\static\index.html"
+    if os.path.exists(html_path):
+        with open(html_path, "r", encoding="utf-8") as f:
+            return HTMLResponse(f.read())
+    return HTMLResponse("<h1>Frontend not found</h1>")
+
+if __name__ == "__main__":
+    print("=" * 50)
+    print("  Echo English Tutor - Web版已启动!")
+    print("  手机访问: http://[你的电脑IP]:8000")
+    print("  本机访问: http://localhost:8000")
+    print("  二维码生成: python -c \"import qrcode; qrcode.make('http://[IP]:8000').show()\"")
+    print("=" * 50)
+    uvicorn.run(app, host="0.0.0.0", port=8000)

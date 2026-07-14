@@ -1,0 +1,42 @@
+{
+  "passed": [
+    "PASS Frontend HTML: 32804 bytes, with Echo",
+    "PASS Quiz stage 1 x5: seen=[2]",
+    "PASS Quiz stage 2 x5: seen=[1]",
+    "PASS Quiz stage 3 x5: seen=[2]",
+    "PASS Quiz stage 4 x5: seen=[3]",
+    "PASS Quiz stage 5 x5: seen=[4]"
+  ],
+  "failed": [
+    "FAIL GET /api/health: Expecting value: line 1 column 1 (char 0)",
+    "FAIL GET /api/status: Expecting value: line 1 column 1 (char 0)",
+    "FAIL GET /api/knowledge: Expecting value: line 1 column 1 (char 0)",
+    "FAIL GET /api/config: Expecting value: line 1 column 1 (char 0)",
+    "FAIL POST /api/quiz (default): Expecting value: line 1 column 1 (char 0)",
+    "FAIL POST /api/quiz (stage=1): Expecting value: line 1 column 1 (char 0)",
+    "FAIL POST /api/quiz (stage=2): Expecting value: line 1 column 1 (char 0)",
+    "FAIL POST /api/quiz (stage=3): Expecting value: line 1 column 1 (char 0)",
+    "FAIL POST /api/quiz (stage=4): Expecting value: line 1 column 1 (char 0)",
+    "FAIL POST /api/quiz (stage=5): Expecting value: line 1 column 1 (char 0)",
+    "FAIL POST /api/log_answer (correct): Expecting value: line 1 column 1 (char 0)",
+    "FAIL POST /api/log_answer (wrong): Expecting value: line 1 column 1 (char 0)",
+    "FAIL POST /api/log_answer (empty): HTTP 422, missing keys: ['status']",
+    "FAIL GET /api/stats: Expecting value: line 1 column 1 (char 0)",
+    "FAIL POST /api/chat (greeting): Expecting value: line 1 column 1 (char 0)",
+    "FAIL POST /api/chat (vocab): Expecting value: line 1 column 1 (char 0)",
+    "FAIL POST /api/chat (grammar): Expecting value: line 1 column 1 (char 0)",
+    "FAIL POST /api/chat (empty): Expecting value: line 1 column 1 (char 0)",
+    "FAIL POST /api/chat (test): Expecting value: line 1 column 1 (char 0)",
+    "FAIL POST /api/chat (reading): Expecting value: line 1 column 1 (char 0)",
+    "FAIL POST /api/chat (thanks): Expecting value: line 1 column 1 (char 0)",
+    "FAIL POST /api/chat (who): Expecting value: line 1 column 1 (char 0)",
+    "FAIL POST /api/chat (answer_a): Expecting value: line 1 column 1 (char 0)",
+    "FAIL GET /api/records: Expecting value: line 1 column 1 (char 0)",
+    "FAIL POST /api/save_record: Expecting value: line 1 column 1 (char 0)",
+    "FAIL POST /api/reset: Expecting value: line 1 column 1 (char 0)",
+    "FAIL POST /api/set_key (empty): Expecting value: line 1 column 1 (char 0)",
+    "FAIL POST /api/test_ai: Expecting value: line 1 column 1 (char 0)"
+  ],
+  "p": 6,
+  "f": 28
+}
